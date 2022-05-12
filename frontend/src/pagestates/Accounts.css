@@ -1,0 +1,28 @@
+.Accounts {
+  width: 50em;
+  margin: auto;
+}
+
+.link {
+  text-decoration: underline;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.center {
+  text-align: center;
+}
+
+.account-button {
+  display: flex;
+}
+
+.account-button .MyLongButton {
+  flex: 1;
+}
+
+.icon-button {
+  margin-top: 1.5em;
+  margin-left: 1em;
+  cursor: pointer;
+}

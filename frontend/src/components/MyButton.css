@@ -1,0 +1,11 @@
+.MyButton {
+  border: 1px solid black;
+  display: inline-block;
+  padding: 1em;
+  cursor: pointer;
+  margin-top: 0.5em;
+}
+
+.MyButton:hover {
+  background-color: lightgray;
+}

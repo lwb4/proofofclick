@@ -1,0 +1,23 @@
+.Drain {
+  width: 50em;
+  margin: auto;
+}
+
+.center {
+  text-align: "center";
+}
+
+.input-row {
+  display: flex;
+}
+
+.input-row #destination-account {
+  flex: 1;
+  font-family: "Roboto Mono", monospace;
+  font-size: large;
+  padding: 0.5em;
+  text-align: center;
+}
+
+.input-row .MyIconButton {
+}

@@ -1,0 +1,11 @@
+.MyLongButton {
+  border: 1px solid black;
+  padding: 1em;
+  cursor: pointer;
+  text-align: center;
+  margin-top: 0.5em;
+}
+
+.MyLongButton:hover {
+  background-color: lightgray;
+}
