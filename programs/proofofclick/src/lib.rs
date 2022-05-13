@@ -14,7 +14,7 @@ pub mod proofofclick {
     // token_to_mint must have pda_authority as an authorized minting authority.
     // There is no initialize function; initialization is a manual operation outside of this
     // program.
-    pub fn mint_and_send_one_token(ctx: Context<MintSendToken>, bump: u8, _nonce: u8) -> Result<()> {
+    pub fn mint_and_send_one_token(ctx: Context<MintSendToken>, bump: u8, _nonce: u64) -> Result<()> {
 
         let mint_to_ix = MintTo{
             mint: ctx.accounts.token_to_mint.to_account_info(),

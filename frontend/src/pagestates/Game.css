@@ -9,6 +9,7 @@
   padding-bottom: 1em;
   background-color: lightgray;
   border-bottom: 1px solid black;
+  height: 3em;
 }
 
 .header-title {
@@ -46,5 +47,36 @@
 .content {
   position: absolute;
   top: 3em;
+  padding: 1em;
+  width: 100%;
+}
+
+.Game {
+  width: 50em;
+  margin: auto;
+  text-align: center;
+}
+
+.orange {
+  color: darkorange;
+}
+
+.footer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+}
+
+.right {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  padding: 1em;
+}
+
+.left {
+  position: absolute;
+  left: 0;
+  bottom: 0;
   padding: 1em;
 }

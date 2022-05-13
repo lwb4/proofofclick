@@ -81,7 +81,7 @@ function Accounts({
       <input type="file" id="input" hidden />
       {accounts.length == 0 ? (
         <>
-          <p>To play Adventure 2D, you must first create an account.</p>
+          <p>To play Proof of Click, you must first create a burner account.</p>
           <p>
             <b>BE WARNED</b>: The private key for this account will be stored in
             your browser's local storage. This is not very secure, and if you
@@ -104,8 +104,8 @@ function Accounts({
         </>
       ) : (
         <>
-          <h2 className="center">Welcome to Adventure 2D!</h2>
-          <p>Select an account to begin the game:</p>
+          <h2 className="center">Welcome to Proof of Click!</h2>
+          <p>Select a burner account to begin the game:</p>
           {accounts.map((a) => (
             <div className="account-button" key={a.publicKey.toBase58()}>
               <MyLongButton onClick={selectAccount(a)}>
@@ -130,7 +130,7 @@ function Accounts({
           <p>
             You can also{" "}
             <span className="link" onClick={createNewAccount}>
-              create a new account
+              create a new burner account
             </span>{" "}
             or{" "}
             <span className="link" onClick={importAccount}>

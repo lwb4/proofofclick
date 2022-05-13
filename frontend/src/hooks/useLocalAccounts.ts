@@ -35,7 +35,6 @@ function useLocalAccounts() {
 
   const removeKeyPair = useCallback(
     (keyPair) => {
-      debugger;
       let comparator = JSON.stringify(Array.from(keyPair.secretKey));
       for (let i = 0; i < secretKeys.length; i++) {
         if (JSON.stringify(secretKeys[i]) === comparator) {

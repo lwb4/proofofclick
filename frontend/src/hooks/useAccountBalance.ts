@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 
-function useAccountBalance(connection, account, tokenMint?) {
+function useAccountBalance(connection, account, tokenMint, oneShot?) {
   const [solBalance, setSolBalance] = useState(null);
   const [tokenBalance, setTokenBalance] = useState(null);
 
@@ -37,11 +37,13 @@ function useAccountBalance(connection, account, tokenMint?) {
 
   useEffect(() => {
     refreshBalances();
-    const interval = setInterval(refreshBalances, 2000);
-    return () => {
-      clearInterval(interval);
-    };
-  }, [refreshBalances]);
+    if (!oneShot) {
+      const interval = setInterval(refreshBalances, 2000);
+      return () => {
+        clearInterval(interval);
+      };
+    }
+  }, [refreshBalances, oneShot]);
 
   return [{ solBalance, tokenBalance }, refreshBalances];
 }

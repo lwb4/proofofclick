@@ -4,6 +4,7 @@ import Home from "./pagestates/Home";
 import Accounts from "./pagestates/Accounts";
 import Game from "./pagestates/Game";
 import Drain from "./pagestates/Drain";
+import Help from "./pagestates/Help";
 import useLocalAccounts from "./hooks/useLocalAccounts";
 import { Connection, PublicKey } from "@solana/web3.js";
 import ProofOfClick from "./rpc/proofofclick";
@@ -21,12 +22,14 @@ const PAGESTATE_HOME = "home";
 const PAGESTATE_ACCOUNTS = "accounts";
 const PAGESTATE_GAME = "game";
 const PAGESTATE_DRAIN = "drain";
+const PAGESTATE_HELP = "help";
 
 const pageStateComponents = {
   [PAGESTATE_HOME]: Home,
   [PAGESTATE_ACCOUNTS]: Accounts,
   [PAGESTATE_GAME]: Game,
   [PAGESTATE_DRAIN]: Drain,
+  [PAGESTATE_HELP]: Help,
 };
 
 function App() {
@@ -39,7 +42,14 @@ function App() {
   const goToAccounts = () => setPageState(PAGESTATE_ACCOUNTS);
   const goToGame = () => setPageState(PAGESTATE_GAME);
   const goToDrain = () => setPageState(PAGESTATE_DRAIN);
-  const pageStateRouters = { goToHome, goToAccounts, goToGame, goToDrain };
+  const goToHelp = () => setPageState(PAGESTATE_HELP);
+  const pageStateRouters = {
+    goToHome,
+    goToAccounts,
+    goToGame,
+    goToDrain,
+    goToHelp,
+  };
 
   const CurrentPageState = pageStateComponents[pageState];
 

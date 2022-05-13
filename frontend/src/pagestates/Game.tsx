@@ -3,7 +3,10 @@ import "./Game.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faRightFromBracket } from "@fortawesome/free-solid-svg-icons";
 import useAccountBalance from "../hooks/useAccountBalance";
+import useSolanaFees from "../hooks/useSolanaFees";
+import useTokenSupply from "../hooks/useTokenSupply";
 import MyButton from "../components/MyButton";
+import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 
 function Game({
   connection,
@@ -19,9 +22,21 @@ function Game({
     tokenMint
   );
   const { solBalance, tokenBalance } = balances as any;
+  const { clickFee, refreshFees } = useSolanaFees(
+    connection,
+    program,
+    currentAccount
+  );
+  const totalSupply = useTokenSupply(connection, tokenMint);
 
   const [unconfirmedTokenBalance, setUnconfirmedTokenBalance] = useState(null);
   const [confirmedTokenBalance, setConfirmedTokenBalance] = useState(null);
+
+  useEffect(() => {
+    if (clickFee == null && refreshFees != null) {
+      refreshFees();
+    }
+  }, [balances, clickFee, refreshFees]);
 
   useEffect(() => {
     if (confirmedTokenBalance == null || tokenBalance > confirmedTokenBalance) {
@@ -60,7 +75,7 @@ function Game({
   return (
     <>
       <div className="header">
-        <div className="header-title">Adventure 2D (devnet)</div>
+        <div className="header-title">Proof of Click (devnet)</div>
         <div
           className="header-account"
           title="Click to copy account address"
@@ -79,20 +94,52 @@ function Game({
         </div>
       </div>
       <div className="content">
-        <p>
-          Token balance: {tokenBalance == null ? "loading..." : tokenBalance}
-        </p>
-        <p>
-          Confirmed token balance:{" "}
-          {confirmedTokenBalance == null ? "loading..." : confirmedTokenBalance}
-        </p>
-        <p>
-          Unconfirmed token balance:{" "}
-          {unconfirmedTokenBalance == null
-            ? "loading..."
-            : unconfirmedTokenBalance}
-        </p>
-        <MyButton onClick={clickButton}>CLICK ME</MyButton>
+        <div className="Game">
+          {solBalance > 0 ? (
+            <>
+              <p>
+                Token balance:{" "}
+                {confirmedTokenBalance == null
+                  ? "loading..."
+                  : confirmedTokenBalance}
+              </p>
+              <MyButton onClick={clickButton}>
+                CLICK ME FOR TOKENS (
+                {clickFee != null ? (
+                  <>costs {clickFee / LAMPORTS_PER_SOL} SOL</>
+                ) : (
+                  <>loading fee...</>
+                )}
+                )
+              </MyButton>
+              {confirmedTokenBalance === unconfirmedTokenBalance ? null : (
+                <p className="orange">
+                  Pending balance:{" "}
+                  {unconfirmedTokenBalance == null
+                    ? "loading..."
+                    : unconfirmedTokenBalance}
+                </p>
+              )}
+            </>
+          ) : (
+            <>
+              <p>To play Proof of Click, you need some SOL!</p>
+              <p>
+                Try requesting 2 devnet SOL into this address from{" "}
+                <a target="_blank" href="https://solfaucet.com/">
+                  Sol Faucet
+                </a>
+                . Then refresh this page.
+              </p>
+            </>
+          )}
+        </div>
+      </div>
+      <div className="footer">
+        <div className="left">
+          Total token supply: {totalSupply == null ? "loading..." : totalSupply}
+        </div>
+        <div className="right">Token address: {tokenMint.toBase58()}</div>
       </div>
     </>
   );
