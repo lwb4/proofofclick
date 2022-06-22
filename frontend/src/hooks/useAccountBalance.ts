@@ -15,32 +15,40 @@ function useTokenAccountBalance(connection, account, tokenMint) {
     }
     let accountChangeListeners = [];
     async function init() {
-      const tokenBalanceResponse =
-        await connection.getTokenAccountsByOwner(account.publicKey, {
+      const tokenBalanceResponse = await connection.getTokenAccountsByOwner(
+        account.publicKey,
+        {
           mint: tokenMint,
-        });
+        }
+      );
       const tokenBalancePromises = tokenBalanceResponse.value.map(
-        ({ pubkey }) => new Promise((resolve, reject) => {
-          connection.getTokenAccountBalance(pubkey)
-            .then(val => resolve([pubkey, val]))
-            .catch(reject);
-        })
+        ({ pubkey }) =>
+          new Promise((resolve, reject) => {
+            connection
+              .getTokenAccountBalance(pubkey)
+              .then((val) => resolve([pubkey, val]))
+              .catch(reject);
+          })
       );
       const tokenBalances = await Promise.all(tokenBalancePromises);
-      const tokenValues = tokenBalances
-        .map(([pk, res]) => [pk, res.value.uiAmount]);
+      const tokenValues = tokenBalances.map(([pk, res]) => [
+        pk,
+        res.value.uiAmount,
+      ]);
       setTokenBalances(Object.fromEntries(tokenValues));
-      accountChangeListeners = tokenBalanceResponse.value.map(
-        ({ pubkey }) => connection.onAccountChange(
+      accountChangeListeners = tokenBalanceResponse.value.map(({ pubkey }) =>
+        connection.onAccountChange(
           pubkey,
           ({ data }, _) => {
             const rawAccount = AccountLayout.decode(data);
-            setTokenBalances(balances => ({
+            setTokenBalances((balances) => ({
               ...balances,
-              [pubkey.toString()]: Number(rawAccount.amount / BigInt(LAMPORTS_PER_SOL)),
+              [pubkey.toString()]: Number(
+                rawAccount.amount / BigInt(LAMPORTS_PER_SOL)
+              ),
             }));
           },
-          "processed",
+          "processed"
         )
       );
     }
@@ -48,32 +56,27 @@ function useTokenAccountBalance(connection, account, tokenMint) {
     return () => {
       async function cleanUp() {
         await Promise.all(
-          accountChangeListeners.map(
-            connection.removeAccountChangeListener));
+          accountChangeListeners.map(connection.removeAccountChangeListener)
+        );
       }
       cleanUp();
-    }
+    };
   }, [connection, account, tokenMint, setTokenBalances]);
-
 
   // Sum together balances for all associated token addresses whenever any
   // of them change.
   useEffect(() => {
     if (Object.values(tokenBalances).length > 0) {
       setTokenBalance(
-        Object.values(tokenBalances).reduce((a: any, b: any) => a + b, 0));
+        Object.values(tokenBalances).reduce((a: any, b: any) => a + b, 0)
+      );
     }
   }, [tokenBalances, setTokenBalance]);
-  
+
   return tokenBalance;
 }
 
-function useAccountBalance(
-  connection,
-  account,
-  tokenMint,
-  cursorMint,
-) {
+function useAccountBalance(connection, account, tokenMint, cursorMint) {
   const [solBalance, setSolBalance] = useState(null);
   const tokenBalance = useTokenAccountBalance(connection, account, tokenMint);
   const cursorBalance = useTokenAccountBalance(connection, account, cursorMint);
@@ -95,7 +98,7 @@ function useAccountBalance(
       ({ lamports }, _) => {
         setSolBalance(lamports / LAMPORTS_PER_SOL);
       },
-      "processed",
+      "processed"
     );
     return () => {
       async function cleanUp() {

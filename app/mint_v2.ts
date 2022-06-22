@@ -8,7 +8,11 @@ import {
   SystemProgram,
   SYSVAR_RENT_PUBKEY,
 } from "@solana/web3.js";
-import { getAssociatedTokenAddress, ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import {
+  getAssociatedTokenAddress,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
 import { Proofofclick } from "../target/types/proofofclick";
 import BN from "bn.js";
 
@@ -17,23 +21,29 @@ async function main() {
 
   const payer = await newKeypairFromFile(args[0]);
 
-  const programId = new PublicKey("7khCm9h5cWdU1KBiMztMvzFiXNCum1iwGUcRVFwKhoP9");
-  const clickTokenMint = new PublicKey("C73wX9ATj7K8K62dFqWEEG14wfupnZqUxZRTXVdEib7S");
-  const cursorTokenMint = new PublicKey("9VaYi71F955j88tCc82FAks5iJkRf7YjEyp34MiwU34o");
+  const programId = new PublicKey(
+    "7khCm9h5cWdU1KBiMztMvzFiXNCum1iwGUcRVFwKhoP9"
+  );
+  const clickTokenMint = new PublicKey(
+    "C73wX9ATj7K8K62dFqWEEG14wfupnZqUxZRTXVdEib7S"
+  );
+  const cursorTokenMint = new PublicKey(
+    "9VaYi71F955j88tCc82FAks5iJkRf7YjEyp34MiwU34o"
+  );
 
   const clickTokenAccount = await getAssociatedTokenAddress(
     clickTokenMint,
-    payer.publicKey,
+    payer.publicKey
   );
 
   const cursorTokenAccount = await getAssociatedTokenAddress(
     cursorTokenMint,
-    payer.publicKey,
+    payer.publicKey
   );
 
   const [pdaAuthority, _] = await PublicKey.findProgramAddress(
     [anchor.utils.bytes.utf8.encode("mint")],
-    programId,
+    programId
   );
 
   const connection = new Connection("https://api.devnet.solana.com");
