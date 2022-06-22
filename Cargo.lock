@@ -880,6 +880,7 @@ dependencies = [
  "anchor-lang",
  "anchor-spl",
  "solana-program",
+ "spl-token",
 ]
 
 [[package]]

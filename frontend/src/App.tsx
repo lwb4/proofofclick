@@ -11,6 +11,7 @@ import ProofOfClick from "./rpc/proofofclick";
 
 // const TOKEN_MINT = "3wcgWYAFgztbQy8TBBzutUC4AyoCiXHBo56WNcUpGy1m"; // local
 const TOKEN_MINT = "C73wX9ATj7K8K62dFqWEEG14wfupnZqUxZRTXVdEib7S"; // devnet
+const CURSOR_TOKEN_MINT = "9VaYi71F955j88tCc82FAks5iJkRf7YjEyp34MiwU34o"; // devnet
 const PROGRAM_ID = "7khCm9h5cWdU1KBiMztMvzFiXNCum1iwGUcRVFwKhoP9";
 const PDA_AUTHORITY = "2dQuRZEk2pYhbrWqACq2LPzTTLAUcLT9trGFnb37rFka";
 const PDA_AUTHORITY_BUMP = 254;
@@ -57,6 +58,7 @@ function App() {
     connection,
     new PublicKey(PROGRAM_ID),
     new PublicKey(TOKEN_MINT),
+    new PublicKey(CURSOR_TOKEN_MINT),
     new PublicKey(PDA_AUTHORITY),
     PDA_AUTHORITY_BUMP
   );
@@ -72,6 +74,7 @@ function App() {
         setCurrentAccount={setCurrentAccount}
         pageStateRouters={pageStateRouters}
         tokenMint={new PublicKey(TOKEN_MINT)}
+        cursorTokenMint={new PublicKey(CURSOR_TOKEN_MINT)}
         program={proofOfClick}
       />
     </div>

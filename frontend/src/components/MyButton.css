@@ -10,3 +10,9 @@
 .MyButton:hover {
   background-color: lightgray;
 }
+
+.MyButtonDisabled {
+  opacity: 0.5;
+  background-color: white !important;
+  cursor: auto;
+}

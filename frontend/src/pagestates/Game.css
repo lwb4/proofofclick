@@ -80,3 +80,13 @@
   bottom: 0;
   padding: 1em;
 }
+
+.right a {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.right a:hover {
+  font-weight: bold;
+}

@@ -1,5 +1,12 @@
 import { setProvider, Program, AnchorProvider } from "@project-serum/anchor";
-import { Transaction, Keypair, Connection, PublicKey } from "@solana/web3.js";
+import {
+  SYSVAR_RENT_PUBKEY,
+  Transaction,
+  Keypair,
+  Connection,
+  PublicKey,
+  SystemProgram,
+} from "@solana/web3.js";
 import {
   getOrCreateAssociatedTokenAccount,
   getAssociatedTokenAddress,
@@ -7,6 +14,7 @@ import {
   createCloseAccountInstruction,
   createTransferInstruction,
   TOKEN_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import IDL from "../../../target/idl/proofofclick.json";
 import BN from "bn.js";
@@ -38,22 +46,27 @@ class BrowserWallet {
 class ProofOfClick {
   connection: Connection;
   programId: PublicKey;
-  tokenToMint: PublicKey;
+  clickTokenMint: PublicKey;
+  cursorTokenMint: PublicKey;
   pdaAuthority: PublicKey;
   bump: number;
 
   userTokenAccounts: any;
   userPrograms: any;
+  mintV2Accounts: any;
+  hasInitialized: any;
 
   constructor(
     connection: Connection,
     programId: PublicKey,
-    tokenToMint: PublicKey,
+    clickTokenMint: PublicKey,
+    cursorTokenMint: PublicKey,
     pdaAuthority: PublicKey,
     bump: number
   ) {
     this.connection = connection;
-    this.tokenToMint = tokenToMint;
+    this.clickTokenMint = clickTokenMint;
+    this.cursorTokenMint = cursorTokenMint;
     this.pdaAuthority = pdaAuthority;
     this.bump = bump;
     this.programId = programId;
@@ -63,28 +76,17 @@ class ProofOfClick {
 
     // map for storing user's anchor program objects
     this.userPrograms = {};
+
+    // optimization so we don't have to query the network for the
+    // mint V2 API accounts every time
+    this.mintV2Accounts = {};
+
+    // optimization so we don't initialize more than once per run
+    this.hasInitialized = {};
   }
 
-  getProgram(userAccount: Keypair) {
-    const userAccountKey = userAccount.publicKey.toBase58();
-    if (this.userPrograms[userAccountKey] === undefined) {
-      if (this.userPrograms[userAccountKey] === undefined) {
-        const wallet = new BrowserWallet(userAccount);
-        setProvider(
-          new AnchorProvider(
-            this.connection,
-            wallet,
-            AnchorProvider.defaultOptions()
-          )
-        );
-        this.userPrograms[userAccountKey] = new Program(
-          IDL as any,
-          this.programId
-        );
-      }
-    }
-    return this.userPrograms[userAccountKey];
-  }
+  // FEES CODE
+  // (not very accurate, doesn't take rent exemption into account)
 
   async getFees(userAccount: Keypair, blockhash) {
     const [clickFee, createTokenAccountFee, deleteTokenAccountFee] =
@@ -107,7 +109,7 @@ class ProofOfClick {
       userAccount
     ).transaction.mintAndSendOneToken(this.bump, new BN(1), {
       accounts: {
-        tokenToMint: this.tokenToMint,
+        tokenToMint: this.clickTokenMint,
         userMinting: userAccount.publicKey,
         userReceiving: userTokenAccount,
         pdaAuthority: this.pdaAuthority,
@@ -160,7 +162,7 @@ class ProofOfClick {
 
   async getCreateAssociatedTokenAccountTxFee(userAccount: Keypair, blockhash) {
     const associatedTokenAccount = await getAssociatedTokenAddress(
-      this.tokenToMint,
+      this.clickTokenMint,
       userAccount.publicKey
     );
 
@@ -172,7 +174,7 @@ class ProofOfClick {
         userAccount.publicKey,
         associatedTokenAccount,
         userAccount.publicKey,
-        this.tokenToMint
+        this.clickTokenMint
       )
     );
 
@@ -183,32 +185,130 @@ class ProofOfClick {
     ).value;
   }
 
+  // used for caching associated token account and program initialization
+
   async getUserTokenAccount(userAccount: Keypair) {
     const userAccountKey = userAccount.publicKey.toBase58();
     if (this.userTokenAccounts[userAccountKey] === undefined) {
-      const userTokenAccount = await getOrCreateAssociatedTokenAccount(
-        this.connection,
-        userAccount,
-        this.tokenToMint,
+      const userTokenAccount = await getAssociatedTokenAddress(
+        this.clickTokenMint,
         userAccount.publicKey
       );
-      this.userTokenAccounts[userAccountKey] = userTokenAccount.address;
+      this.userTokenAccounts[userAccountKey] = userTokenAccount;
     }
     return this.userTokenAccounts[userAccountKey];
   }
 
+  getProgram(userAccount: Keypair) {
+    const userAccountKey = userAccount.publicKey.toBase58();
+    if (this.userPrograms[userAccountKey] === undefined) {
+      if (this.userPrograms[userAccountKey] === undefined) {
+        const wallet = new BrowserWallet(userAccount);
+        setProvider(
+          new AnchorProvider(
+            this.connection,
+            wallet,
+            AnchorProvider.defaultOptions()
+          )
+        );
+        this.userPrograms[userAccountKey] = new Program(
+          IDL as any,
+          this.programId
+        );
+      }
+    }
+    return this.userPrograms[userAccountKey];
+  }
+
+  // v1 of the mint and send API
   async mintAndSendOne(userAccount: Keypair, nonce: number) {
     const tokenAccount = await this.getUserTokenAccount(userAccount);
     const program = this.getProgram(userAccount);
     await program.methods
       .mintAndSendOneToken(this.bump, new BN(nonce))
       .accounts({
-        tokenToMint: this.tokenToMint,
+        tokenToMint: this.clickTokenMint,
         userMinting: userAccount.publicKey,
         userReceiving: tokenAccount,
         pdaAuthority: this.pdaAuthority,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
+      .signers([userAccount])
+      .rpc();
+  }
+
+  // v2 of the mint and send API has three parts: init, mint, and swap
+
+  // pretty much all of the V2 apis use the same accounts structure, so this helper
+  // function helps to organize them
+  async getMintV2Accounts(userAccount: Keypair) {
+    const userAccountKey = userAccount.publicKey.toBase58();
+    if (this.mintV2Accounts[userAccountKey] === undefined) {
+      const clickTokenAccount = await getAssociatedTokenAddress(
+        this.clickTokenMint,
+        userAccount.publicKey
+      );
+      const cursorTokenAccount = await getAssociatedTokenAddress(
+        this.cursorTokenMint,
+        userAccount.publicKey
+      );
+      this.mintV2Accounts[userAccountKey] = {
+        payer: userAccount.publicKey,
+        clickTokenMint: this.clickTokenMint,
+        cursorTokenMint: this.cursorTokenMint,
+        clickTokenAccount,
+        cursorTokenAccount,
+        pdaAuthority: this.pdaAuthority,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        rent: SYSVAR_RENT_PUBKEY,
+      };
+    }
+    return this.mintV2Accounts[userAccountKey];
+  }
+
+  // init makes sure all the associated token accounts exist for a given account
+  async initializeMintV2(userAccount: Keypair) {
+    const userAccountKey = userAccount.publicKey.toBase58();
+    if (this.hasInitialized[userAccountKey]) {
+      return;
+    }
+
+    let accounts = await this.getMintV2Accounts(userAccount);
+    accounts = {
+      ...accounts,
+      systemProgram: SystemProgram.programId,
+    };
+    const program = this.getProgram(userAccount);
+    await program.methods
+      .initializeMintV2()
+      .accounts(accounts)
+      .signers([userAccount])
+      .rpc();
+
+    this.hasInitialized[userAccountKey] = true;
+  }
+
+  // uses your cursor balance to determine how many click tokens you get
+  async mintBasedOnBalances(userAccount: Keypair, nonce: number) {
+    await this.initializeMintV2(userAccount);
+    const accounts = await this.getMintV2Accounts(userAccount);
+    const program = this.getProgram(userAccount);
+    await program.methods
+      .mintBasedOnBalances(new BN(nonce))
+      .accounts(accounts)
+      .signers([userAccount])
+      .rpc();
+  }
+
+  // burn 50 click and mint 1 cursor
+  async buyCursor(userAccount: Keypair, nonce: number) {
+    await this.initializeMintV2(userAccount);
+    const accounts = await this.getMintV2Accounts(userAccount);
+    const program = this.getProgram(userAccount);
+    await program.methods
+      .buyCursor(new BN(nonce))
+      .accounts(accounts)
       .signers([userAccount])
       .rpc();
   }

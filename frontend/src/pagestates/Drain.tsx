@@ -64,14 +64,15 @@ function Drain({
   currentAccount,
   pageStateRouters,
   tokenMint,
+  cursorTokenMint,
   program,
 }) {
   const [sendStatus, setSendStatus] = useState(SendStatus.Default);
-  const [balances, _] = useAccountBalance(
+  const balances = useAccountBalance(
     connection,
     currentAccount,
     tokenMint,
-    true
+    cursorTokenMint,
   );
   const { transferFee, createTokenAccountFee, deleteTokenAccountFee } =
     useSolanaFees(connection, program, currentAccount);

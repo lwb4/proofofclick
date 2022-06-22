@@ -14,23 +14,34 @@ function Game({
   setCurrentAccount,
   pageStateRouters,
   tokenMint,
+  cursorTokenMint,
   program,
 }) {
-  const [balances, _] = useAccountBalance(
+  const [nonce, setNonce] = useState(0);
+  const balances = useAccountBalance(
     connection,
     currentAccount,
-    tokenMint
+    tokenMint,
+    cursorTokenMint
   );
-  const { solBalance, tokenBalance } = balances as any;
+  const { solBalance, tokenBalance, cursorBalance } = balances as any;
   const { clickFee, refreshFees } = useSolanaFees(
     connection,
     program,
     currentAccount
   );
   const totalSupply = useTokenSupply(connection, tokenMint);
+  const totalCursorSupply = useTokenSupply(connection, cursorTokenMint);
 
   const [unconfirmedTokenBalance, setUnconfirmedTokenBalance] = useState(null);
-  const [confirmedTokenBalance, setConfirmedTokenBalance] = useState(null);
+  const [unconfirmedCursorBalance, setUnconfirmedCursorBalance] =
+    useState(null);
+
+  const getNonce = () => {
+    const ret = nonce;
+    setNonce((x) => x + 1);
+    return ret;
+  };
 
   useEffect(() => {
     if (clickFee == null && refreshFees != null) {
@@ -39,19 +50,24 @@ function Game({
   }, [balances, clickFee, refreshFees]);
 
   useEffect(() => {
-    if (confirmedTokenBalance == null || tokenBalance > confirmedTokenBalance) {
-      setConfirmedTokenBalance(tokenBalance);
+    if (
+      tokenBalance !== null &&
+      unconfirmedTokenBalance === null
+    ) {
+      setUnconfirmedTokenBalance(tokenBalance);
     }
-  }, [balances, confirmedTokenBalance, tokenBalance, setConfirmedTokenBalance]);
-
-  useEffect(() => {
-    if (confirmedTokenBalance !== null && unconfirmedTokenBalance === null) {
-      setUnconfirmedTokenBalance(confirmedTokenBalance);
+    if (
+      cursorBalance !== null &&
+      unconfirmedCursorBalance === null
+    ) {
+      setUnconfirmedCursorBalance(cursorBalance);
     }
   }, [
-    confirmedTokenBalance,
+    balances,
     unconfirmedTokenBalance,
     setUnconfirmedTokenBalance,
+    unconfirmedCursorBalance,
+    setUnconfirmedCursorBalance,
   ]);
 
   let currentAccountAddress = `${currentAccount.publicKey.toBase58()}`;
@@ -66,10 +82,18 @@ function Game({
     pageStateRouters.goToAccounts();
   };
 
-  const clickButton = async () => {
-    setUnconfirmedTokenBalance((x) => x + 1);
-    await program.mintAndSendOne(currentAccount, unconfirmedTokenBalance);
-    setConfirmedTokenBalance((x) => x + 1);
+  const clickToMintToken = async () => {
+    setUnconfirmedTokenBalance((x) => x + 1 + cursorBalance);
+    await program.mintBasedOnBalances(currentAccount, getNonce());
+  };
+
+  const buyCursor = async () => {
+    if (tokenBalance < 50) {
+      return;
+    }
+    setUnconfirmedTokenBalance((x) => x - 50);
+    setUnconfirmedCursorBalance((x) => x + 1);
+    await program.buyCursor(currentAccount, getNonce());
   };
 
   return (
@@ -99,11 +123,14 @@ function Game({
             <>
               <p>
                 Token balance:{" "}
-                {confirmedTokenBalance == null
+                {tokenBalance == null
                   ? "loading..."
-                  : confirmedTokenBalance}
+                  : tokenBalance}
+                {tokenBalance === unconfirmedTokenBalance ? null : (
+                  <span className="orange">{" "}(pending: {unconfirmedTokenBalance})</span>
+                )}
               </p>
-              <MyButton onClick={clickButton}>
+              <MyButton onClick={clickToMintToken}>
                 CLICK ME FOR TOKENS (
                 {clickFee != null ? (
                   <>costs {clickFee / LAMPORTS_PER_SOL} SOL</>
@@ -112,14 +139,24 @@ function Game({
                 )}
                 )
               </MyButton>
-              {confirmedTokenBalance === unconfirmedTokenBalance ? null : (
-                <p className="orange">
-                  Pending balance:{" "}
-                  {unconfirmedTokenBalance == null
-                    ? "loading..."
-                    : unconfirmedTokenBalance}
-                </p>
-              )}
+              <p>
+                Cursor balance:{" "}
+                {cursorBalance == null
+                  ? "loading..."
+                  : cursorBalance}
+                {cursorBalance === unconfirmedCursorBalance ? null : (
+                  <span className="orange">{" "}(pending: {unconfirmedCursorBalance})</span>
+                )}
+              </p>
+              <MyButton disabled={tokenBalance < 50 || unconfirmedTokenBalance < 50} onClick={buyCursor}>
+                BUY CURSOR FOR 50 TOKENS (
+                {clickFee != null ? (
+                  <>costs {clickFee / LAMPORTS_PER_SOL} SOL</>
+                ) : (
+                  <>loading fee...</>
+                )}
+                )
+              </MyButton>
             </>
           ) : (
             <>
@@ -137,9 +174,19 @@ function Game({
       </div>
       <div className="footer">
         <div className="left">
-          Total token supply: {totalSupply == null ? "loading..." : totalSupply}
+          <p>
+            Total token supply:{" "}
+            {totalSupply == null ? "loading..." : totalSupply}
+          </p>
+          <p>
+            Total cursor supply:{" "}
+            {totalCursorSupply == null ? "loading..." : totalCursorSupply}
+          </p>
         </div>
-        <div className="right">Token address: {tokenMint.toBase58()}</div>
+        <div className="right">
+          <p>Token address: <a target="_blank" href={`https://solanabeach.io/address/${tokenMint.toBase58()}?cluster=devnet`}>{tokenMint.toBase58()}</a></p>
+          <p>Cursor address: <a target="_blank" href={`https://solanabeach.io/address/${cursorTokenMint.toBase58()}?cluster=devnet`}>{cursorTokenMint.toBase58()}</a></p>
+        </div>
       </div>
     </>
   );
